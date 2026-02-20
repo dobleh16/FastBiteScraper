@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "FastBiteScraper - Exportador de Google Maps B2B",
+  "version": "1.1",
+  "description": "Extrae prospectos de restaurantes para FastBiteSaaS desde Google Maps o Búsqueda, detecta WhatsApp y califica (Hot/Warm).",
+  "permissions": [
+    "activeTab",
+    "scripting"
+  ],
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "host_permissions": [
+    "https://*.google.com/*",
+    "https://*.google.es/*",
+    "https://*.google.com.co/*",
+    "https://*.google.com.mx/*",
+    "https://*.google.cl/*",
+    "https://*.google.com.ar/*",
+    "https://*.google.com.pe/*"
+  ]
+}

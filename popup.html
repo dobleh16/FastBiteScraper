@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="popup.css">
+  <title>FastBiteScraper</title>
+</head>
+
+<body>
+  <div class="container">
+    <div class="header">
+      <img src="https://fonts.gstatic.com/s/i/short-term/release/googlesymbols/restaurant/default/24px.svg" alt="Icon"
+        class="icon" />
+      <h1 class="brand-title">FastBiteScraper</h1>
+    </div>
+    <p class="subtitle">Prospectos B2B desde Google Maps</p>
+
+    <div class="input-group">
+      <label for="campaignInput">Etiqueta de Campaña (opcional):</label>
+      <input type="text" id="campaignInput" placeholder="Ej: Campaña Bogotá Marzo" />
+    </div>
+
+    <div class="actions">
+      <button id="scrapeBtn" class="btn primary">
+        <span>Extraer Restaurantes</span>
+      </button>
+    </div>
+
+    <div id="status" class="status-box hidden">
+      <p id="statusMsg"></p>
+    </div>
+
+    <div id="resultsSummary" class="summary-box hidden">
+      <h3>Resumen de Extracción</h3>
+      <div class="stats">
+        <div class="stat-item">
+          <span class="stat-value" id="statTotal">0</span>
+          <span class="stat-label">Total</span>
+        </div>
+        <div class="stat-item stat-hot">
+          <span class="stat-value" id="statHot">0</span>
+          <span class="stat-label">🔥 Calientes</span>
+        </div>
+        <div class="stat-item stat-wa">
+          <span class="stat-value" id="statWa">0</span>
+          <span class="stat-label">WhatsApp</span>
+        </div>
+      </div>
+
+      <div class="download-actions">
+        <button id="downloadAllBtn" class="btn success">Descargar TODOS (CSV)</button>
+        <button id="downloadHotBtn" class="btn success-outline">Descargar solo CALIENTES</button>
+      </div>
+
+      <button id="waGeneratorBtn" class="btn secondary">Crear Mensaje WA</button>
+    </div>
+
+    <div id="waModal" class="wa-modal hidden">
+      <h3>Mensaje Plantilla</h3>
+      <label for="ordersInput">Pedidos promedio (día) por Rappi:</label>
+      <input type="number" id="ordersInput" value="30" />
+      <textarea id="waTemplate" rows="10"></textarea>
+      <button id="copyWaBtn" class="btn primary">Copiar Mensaje</button>
+    </div>
+
+  </div>
+  <script src="popup.js"></script>
+</body>
+
+</html>
