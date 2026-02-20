@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="dashboard.css">
+    <title>FastBite - Dashboard de Prospectos</title>
+</head>
+
+<body>
+    <div class="dashboard-container">
+        <aside class="sidebar">
+            <div class="brand">
+                <img src="https://fonts.gstatic.com/s/i/short-term/release/googlesymbols/restaurant/default/24px.svg"
+                    alt="Icon" class="icon" />
+                <h2>FastBiteSaaS</h2>
+            </div>
+
+            <div class="wa-config">
+                <h3>Configuración de WhatsApp</h3>
+                <p class="section-desc">Personaliza el mensaje que enviarás a los restaurantes.</p>
+
+                <label for="ordersInput">Pedidos promedio/día (Rappi):</label>
+                <input type="number" id="ordersInput" value="30" />
+
+                <label for="waTemplate">Plantilla del mensaje:</label>
+                <textarea id="waTemplate" rows="12"></textarea>
+            </div>
+
+            <div class="summary-section">
+                <h3>Resumen</h3>
+                <div class="stat-badge">
+                    <span>Total:</span>
+                    <span id="statTotal">0</span>
+                </div>
+                <div class="stat-badge hot">
+                    <span>🔥 Calientes:</span>
+                    <span id="statHot">0</span>
+                </div>
+                <div class="stat-badge wapp">
+                    <span>Con WhatsApp:</span>
+                    <span id="statWa">0</span>
+                </div>
+            </div>
+
+            <div class="export-actions">
+                <button id="downloadFullCsv" class="btn secondary">Descargar CSV Completo</button>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="topbar">
+                <h1>Gestión de Prospectos</h1>
+            </header>
+
+            <div class="table-container">
+                <table id="prospectosTable">
+                    <thead>
+                        <tr>
+                            <th>Restaurante</th>
+                            <th>Contacto / WA</th>
+                            <th>Score</th>
+                            <th>Calificación</th>
+                            <th>Categoría</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <!-- Filas dinámicas -->
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <script src="dashboard.js"></script>
+</body>
+
+</html>

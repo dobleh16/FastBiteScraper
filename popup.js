@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     const scrapeBtn = document.getElementById('scrapeBtn');
     const downloadAllBtn = document.getElementById('downloadAllBtn');
-    const downloadHotBtn = document.getElementById('downloadHotBtn');
+    const openDashboardBtn = document.getElementById('openDashboardBtn');
     const statusBox = document.getElementById('status');
     const statusMsg = document.getElementById('statusMsg');
     const campaignInput = document.getElementById('campaignInput');
@@ -144,13 +144,14 @@ document.addEventListener('DOMContentLoaded', () => {
         downloadCSV(scrapedData);
     });
 
-    downloadHotBtn.addEventListener('click', () => {
-        const calientes = scrapedData.filter(d => d.Score_Prospecto === "🔥 Caliente");
-        if (calientes.length === 0) {
-            alert("No hay prospectos Calientes para descargar.");
+    openDashboardBtn.addEventListener('click', () => {
+        if (scrapedData.length === 0) {
+            alert("No hay datos para mostrar.");
             return;
         }
-        downloadCSV(calientes);
+        chrome.storage.local.set({ fastbite_scraped_data: scrapedData }, () => {
+            chrome.tabs.create({ url: chrome.runtime.getURL('dashboard.html') });
+        });
     });
 
     // WA Generator Logic
