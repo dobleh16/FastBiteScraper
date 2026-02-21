@@ -53,8 +53,18 @@ async function scrapeData() {
         while (attempts < maxAttempts) {
           await delay(200); // Aumentado a 200ms para conexiones lentas
 
+          // Buscar contenedor principal del lugar actual
+          // Google Maps generalmente usa un div con aria-label igual al nombre del lugar para el panel lateral de detalles
+          let container = document.querySelector(`div[role="main"][aria-label="${name}"]`);
+
+          if (!container) {
+            // Fallback a paneles visibles genéricos en la vista
+            const panels = Array.from(document.querySelectorAll('.bJzME.tTVLSc, .Nv2PK, div[role="main"]'));
+            container = panels.find(p => p.getBoundingClientRect().width > 0 && p.textContent.includes(name)) || document;
+          }
+
           const getVisible = (selector) => {
-            const nodes = document.querySelectorAll(selector);
+            const nodes = container.querySelectorAll(selector);
             for (let el of nodes) {
               const rect = el.getBoundingClientRect();
               if (rect.width > 0 && rect.height > 0) return el;
@@ -111,7 +121,7 @@ async function scrapeData() {
 
           // WhatsApp 
           // Buscar enlaces comunes de WhatsApp en el panel.
-          const waLinks = document.querySelectorAll('a[href*="wa.me"], a[href*="api.whatsapp.com"]');
+          const waLinks = container.querySelectorAll('a[href*="wa.me"], a[href*="api.whatsapp.com"]');
           const visibleWaLinks = Array.from(waLinks).filter(el => {
             const rect = el.getBoundingClientRect();
             return rect.width > 0 && rect.height > 0;
@@ -125,6 +135,16 @@ async function scrapeData() {
             }
           }
           attempts++;
+        }
+
+        // Si después de todos los intentos phone sigue siendo N/A, hagamos un chequeo global de última instancia
+        // a veces el panel no coincide con el aria-label esperado.
+        if (phone === "N/A") {
+          const anyPhone = document.querySelector('button[data-item-id^="phone:tel:"]');
+          if (anyPhone && anyPhone.getBoundingClientRect().width > 0) {
+            const inner = anyPhone.querySelector('.Io6YTe');
+            if (inner) phone = inner.textContent.trim();
+          }
         }
 
         // Calcular Score_Prospecto
