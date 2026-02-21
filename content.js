@@ -53,9 +53,18 @@ async function scrapeData() {
         while (attempts < maxAttempts) {
           await delay(200); // Aumentado a 200ms para conexiones lentas
 
+          const getVisible = (selector) => {
+            const nodes = document.querySelectorAll(selector);
+            for (let el of nodes) {
+              const rect = el.getBoundingClientRect();
+              if (rect.width > 0 && rect.height > 0) return el;
+            }
+            return null;
+          };
+
           // Telefono
           // Selector act: 'button[data-item-id^="phone:tel:"]'. Fallback texto interno: '.Io6YTe'
-          const phoneBtn = document.querySelector('button[data-item-id^="phone:tel:"]');
+          const phoneBtn = getVisible('button[data-item-id^="phone:tel:"]');
           if (phoneBtn) {
             const lbl = phoneBtn.getAttribute('aria-label');
             if (lbl) {
@@ -69,7 +78,7 @@ async function scrapeData() {
 
           // Direccion
           // Selector act: 'button[data-item-id="address"]'. Fallback texto interno: '.Io6YTe'
-          const addrBtn = document.querySelector('button[data-item-id="address"]');
+          const addrBtn = getVisible('button[data-item-id="address"]');
           if (addrBtn) {
             const inner = addrBtn.querySelector('.Io6YTe');
             if (inner) address = inner.textContent.trim();
@@ -77,35 +86,39 @@ async function scrapeData() {
 
           // Categoria 
           // Selector act: 'button.DkEaL' (botón de la categoría bajo el título). Fallback: buscar cerca de h1.
-          const catBtn = document.querySelector('button.DkEaL');
+          const catBtn = getVisible('button.DkEaL');
           if (catBtn && catBtn.textContent) {
             category = catBtn.textContent.trim();
           } else {
-            const fallbackCat = document.querySelector('h1.DUwDvf + div span');
+            const fallbackCat = getVisible('h1.DUwDvf + div span');
             if (fallbackCat) category = fallbackCat.textContent.trim();
           }
 
           // Sitio_Web 
           // Selector act: 'a[data-item-id="authority"]'. Fallback: 'a.QqG1Nd' (icon de web)
-          const webBtn = document.querySelector('a[data-item-id="authority"]');
+          const webBtn = getVisible('a[data-item-id="authority"]');
           if (webBtn && webBtn.href) {
             website = webBtn.href;
           }
 
           // Calificacion
           // Selector act: 'div.F7nice span[aria-hidden="true"]'.
-          const ratingEl = document.querySelector('div.F7nice span[aria-hidden="true"]');
+          const ratingEl = getVisible('div.F7nice span[aria-hidden="true"]');
           if (ratingEl) rating = ratingEl.textContent.trim();
 
-          const revEl = document.querySelector('div.F7nice span[aria-label*="reseñas"], div.F7nice span[aria-label*="reviews"]');
+          const revEl = getVisible('div.F7nice span[aria-label*="reseñas"], div.F7nice span[aria-label*="reviews"]');
           if (revEl) reviews = revEl.textContent.replace(/[()]/g, '').trim();
 
           // WhatsApp 
           // Buscar enlaces comunes de WhatsApp en el panel.
           const waLinks = document.querySelectorAll('a[href*="wa.me"], a[href*="api.whatsapp.com"]');
-          if (waLinks.length > 0) tieneWa = "Sí";
+          const visibleWaLinks = Array.from(waLinks).filter(el => {
+            const rect = el.getBoundingClientRect();
+            return rect.width > 0 && rect.height > 0;
+          });
+          if (visibleWaLinks.length > 0) tieneWa = "Sí";
 
-          const titleLoaded = document.querySelector('h1.DUwDvf');
+          const titleLoaded = getVisible('h1.DUwDvf');
           if (titleLoaded && titleLoaded.textContent.trim() === name) {
             if (phone !== "N/A" || attempts > 5) { // Esperar un par de intentos extras si el teléfono no carga inmediato
               break;
