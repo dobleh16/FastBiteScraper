@@ -21,11 +21,25 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function updateTemplate() {
-        const pedidos = parseInt(ordersInput.value) || 0;
+        const pedidos = parseInt(ordersInput.value) || 10;
         const calculo = pedidos * 30 * 25000 * 0.25;
         const formatMoney = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(calculo);
 
-        waTemplate.value = `Hola [NOMBRE_RESTAURANTE] \n\nVi tu restaurante en Google Maps y quería contarte algo rápido.\n\nDeja de perder ventas por no responder WhatsApp a tiempo, deja que FastBiteSaaS se haga cargo por ti\n\nMenú digital profesional + Pedidos automáticos por WhatsApp + Monitor de cocina.\nTodo lo que vendas es 100% tuyo.\n\n¿Sabías que con ${pedidos} pedidos al día a $25.000 promedio, podrías estar pagando al menos ${formatMoney} al mes en comisiones ocultas o de otras apps?\n\n¿Hablamos 10 minutos? 🚀\nhttps://fastbitesas.web.app/`;
+        waTemplate.value = `Hola [NOMBRE_RESTAURANTE] 
+
+Vi tu restaurante en Google Maps y quería contarte algo rápido.
+
+Deja de perder ventas por no responder WhatsApp a tiempo, deja que FastBiteSaaS se haga cargo por ti.
+
+Menú digital profesional + Pedidos automáticos por WhatsApp + Monitor de cocina en tiempo real.
+Cero comisiones: Todo lo que vendas es 100% tuyo.
+
+¿Sabías que con ${pedidos} pedidos al día a $25.000 promedio, podrías estar pagando al menos ${formatMoney} al mes en comisiones u otras apps?
+
+Por solo $150.000 COP al mes centralizas tu operación y evitas colapsos.
+
+¿Hablamos 10 minutos? 
+https://fastbitesas.web.app/`;
     }
 
     // Initialize template
@@ -59,8 +73,14 @@ document.addEventListener('DOMContentLoaded', () => {
             cleanPhone = '57' + cleanPhone;
         }
 
+        const cleanName = (name || "")
+            .split(/[-|()]/)[0] // Tomar solo hasta el primer separador
+            .trim()
+            .toLowerCase()
+            .replace(/(^\w|\s\w|[-_]\w)/g, m => m.toUpperCase()); // Convertir a Title Case
+
         const template = waTemplate.value;
-        const message = template.replace('[NOMBRE_RESTAURANTE]', name);
+        const message = template.replace(/\[NOMBRE_RESTAURANTE\]/g, cleanName);
         const encodedMessage = encodeURIComponent(message);
 
         return `https://wa.me/${cleanPhone}?text=${encodedMessage}`;

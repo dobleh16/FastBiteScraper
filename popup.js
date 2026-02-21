@@ -163,18 +163,22 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function updateTemplate() {
-        const pedidos = parseInt(ordersInput.value) || 0;
+        const pedidos = parseInt(ordersInput.value) || 10;
         const calculo = pedidos * 30 * 25000 * 0.25;
-        // Formato para plata (ej: $ 1.500.000)
         const formatMoney = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(calculo);
 
         waTemplate.value = `Hola [NOMBRE_RESTAURANTE] 👋
 
 Vi tu restaurante en Google Maps y quería contarte algo rápido.
 
-¿Sabías que con ${pedidos} pedidos al día a $25.000 promedio, le estás regalando aproximadamente ${formatMoney} al mes a Rappi?
+Deja de perder ventas por no responder WhatsApp a tiempo, deja que FastBiteSaaS se haga cargo por ti.
 
-En FastBiteSaaS te ayudamos a recibir esos pedidos directo por WhatsApp, sin comisiones. Setup en 24 horas, $150.000/mes.
+Menú digital profesional + Pedidos automáticos por WhatsApp + Monitor de cocina en tiempo real.
+Cero comisiones: Todo lo que vendas es 100% tuyo.
+
+¿Sabías que con ${pedidos} pedidos al día a $25.000 promedio, podrías estar pagando al menos ${formatMoney} al mes en comisiones u otras apps?
+
+Por solo $150.000 COP al mes centralizas tu operación y evitas colapsos.
 
 ¿Hablamos 10 minutos? 🚀
 https://fastbitesas.web.app/`;
