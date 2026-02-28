@@ -1,145 +1,160 @@
+// FastBiteScraper v2.0 - Content Script
+// Auto-scroll + Enhanced scraping + Partial saves + Better WA detection
+
 async function scrapeData() {
   const isMaps = window.location.href.includes('google.com/maps');
   const results = [];
 
-  function delay(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
+  function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+  function sendMsg(msg) {
+    try { chrome.runtime.sendMessage(msg).catch(() => { }); } catch (e) { }
   }
 
-  // Notificamos inicio
-  try {
-    chrome.runtime.sendMessage({ type: "start" }).catch(() => { });
-  } catch (e) { }
+  async function savePartial() {
+    try {
+      await chrome.storage.local.set({
+        fastbite_partial: results.slice(),
+        fastbite_status: 'running',
+        fastbite_progress: { done: results.length, time: Date.now() }
+      });
+    } catch (e) { }
+  }
+
+  // ── Auto-scroll Maps sidebar to load ALL results ──
+  async function autoScrollMapsList() {
+    const selectors = ['div[role="feed"]', '.m6QErb.WNBkOb', '.DxyBCb .m6QErb'];
+    let scrollBox = null;
+    for (const sel of selectors) {
+      const el = document.querySelector(sel);
+      if (el && el.scrollHeight > el.clientHeight) { scrollBox = el; break; }
+    }
+    if (!scrollBox) {
+      for (const p of document.querySelectorAll('[role="feed"], .m6QErb')) {
+        if (p.scrollHeight > p.clientHeight) { scrollBox = p; break; }
+      }
+    }
+    if (!scrollBox) return;
+
+    let prevHeight = 0, stalls = 0;
+    sendMsg({ type: 'scrolling' });
+
+    while (stalls < 3) {
+      scrollBox.scrollTop = scrollBox.scrollHeight;
+      await delay(1500);
+      if (scrollBox.scrollHeight === prevHeight) stalls++;
+      else stalls = 0;
+      prevHeight = scrollBox.scrollHeight;
+
+      const endMarker = scrollBox.querySelector('.HlvSq, .lXJj5c.Hk4XGb');
+      if (endMarker) break;
+
+      const loaded = document.querySelectorAll('a.hfpxzc, a[href*="/maps/place/"]').length;
+      sendMsg({ type: 'scroll_progress', loaded });
+    }
+  }
+
+  // ── Helper: get visible element ──
+  function getVisible(container, selector) {
+    for (const el of container.querySelectorAll(selector)) {
+      const r = el.getBoundingClientRect();
+      if (r.width > 0 && r.height > 0) return el;
+    }
+    return null;
+  }
+
+  // ── Score calculation ──
+  function calcScore(phone, rating, reviews) {
+    const numR = parseFloat(rating.replace(',', '.')) || 0;
+    const numRev = parseInt(reviews.replace(/\D/g, '')) || 0;
+    const hasPhone = phone !== 'N/A' && phone.length > 6;
+    if (hasPhone && numR >= 4.0 && numRev >= 50) return '🔥 Caliente';
+    if (hasPhone && (numR < 4.0 || numRev < 50)) return '🟡 Tibio';
+    return '❄️ Frío';
+  }
+
+  sendMsg({ type: 'start' });
 
   if (isMaps) {
-    // Selectores actualizados (2025/2026): 'a.hfpxzc' para enlaces en lista lateral de Maps.
-    // Fallback: enlaces que contienen '/maps/place/'
+    // ── PHASE 1: Auto-scroll ──
+    await autoScrollMapsList();
+
+    // ── PHASE 2: Collect unique links ──
     const links = Array.from(document.querySelectorAll('a.hfpxzc, a[href*="/maps/place/"]'));
+    const uniqueLinks = [], seen = new Set();
+    links.forEach(l => { if (l.href && !seen.has(l.href)) { seen.add(l.href); uniqueLinks.push(l); } });
 
-    const uniqueLinks = [];
-    const seen = new Set();
-    links.forEach(l => {
-      if (l.href && !seen.has(l.href)) {
-        seen.add(l.href);
-        uniqueLinks.push(l);
-      }
-    });
-
+    // ── PHASE 3: Scrape each restaurant ──
     for (let i = 0; i < uniqueLinks.length; i++) {
       const link = uniqueLinks[i];
       const url = link.href;
       const name = link.getAttribute('aria-label') || link.textContent.trim() || 'Desconocido';
-
       if (!name || name === 'Desconocido') continue;
 
-      try {
-        chrome.runtime.sendMessage({ type: "progress", current: i + 1, total: uniqueLinks.length, name: name }).catch(() => { });
-      } catch (e) { }
+      sendMsg({ type: 'progress', current: i + 1, total: uniqueLinks.length, name });
 
       try {
         link.click();
 
-        let phone = "N/A";
-        let rating = "N/A";
-        let reviews = "N/A";
-        let address = "N/A";
-        let category = "N/A";
-        let website = "N/A";
-        let tieneWa = "No";
-
+        let phone = 'N/A', rating = 'N/A', reviews = 'N/A', address = 'N/A';
+        let category = 'N/A', website = 'N/A', tieneWa = 'No', horario = 'N/A';
         let attempts = 0;
-        const maxAttempts = 25; // Aumentado a 25 según req
 
-        while (attempts < maxAttempts) {
-          await delay(200); // Aumentado a 200ms para conexiones lentas
-
-          // Buscar contenedor principal del lugar actual
-          // Google Maps generalmente usa un div con aria-label igual al nombre del lugar para el panel lateral de detalles
+        while (attempts < 25) {
+          await delay(200);
           let container = document.querySelector(`div[role="main"][aria-label="${name}"]`);
-
           if (!container) {
-            // Fallback a paneles visibles genéricos en la vista
             const panels = Array.from(document.querySelectorAll('.bJzME.tTVLSc, .Nv2PK, div[role="main"]'));
             container = panels.find(p => p.getBoundingClientRect().width > 0 && p.textContent.includes(name)) || document;
           }
 
-          const getVisible = (selector) => {
-            const nodes = container.querySelectorAll(selector);
-            for (let el of nodes) {
-              const rect = el.getBoundingClientRect();
-              if (rect.width > 0 && rect.height > 0) return el;
-            }
-            return null;
-          };
-
-          // Telefono
-          // Selector act: 'button[data-item-id^="phone:tel:"]'. Fallback texto interno: '.Io6YTe'
-          const phoneBtn = getVisible('button[data-item-id^="phone:tel:"]');
+          // Phone
+          const phoneBtn = getVisible(container, 'button[data-item-id^="phone:tel:"]');
           if (phoneBtn) {
             const lbl = phoneBtn.getAttribute('aria-label');
-            if (lbl) {
-              phone = lbl.replace('Teléfono:', '').replace('Phone:', '').trim();
-            }
-            if (!phone || phone === "N/A") {
+            if (lbl) phone = lbl.replace('Teléfono:', '').replace('Phone:', '').trim();
+            if (!phone || phone === 'N/A') {
               const inner = phoneBtn.querySelector('.Io6YTe');
               if (inner) phone = inner.textContent.trim();
             }
           }
 
-          // Direccion
-          // Selector act: 'button[data-item-id="address"]'. Fallback texto interno: '.Io6YTe'
-          const addrBtn = getVisible('button[data-item-id="address"]');
-          if (addrBtn) {
-            const inner = addrBtn.querySelector('.Io6YTe');
-            if (inner) address = inner.textContent.trim();
-          }
+          // Address
+          const addrBtn = getVisible(container, 'button[data-item-id="address"]');
+          if (addrBtn) { const inner = addrBtn.querySelector('.Io6YTe'); if (inner) address = inner.textContent.trim(); }
 
-          // Categoria 
-          // Selector act: 'button.DkEaL' (botón de la categoría bajo el título). Fallback: buscar cerca de h1.
-          const catBtn = getVisible('button.DkEaL');
-          if (catBtn && catBtn.textContent) {
-            category = catBtn.textContent.trim();
-          } else {
-            const fallbackCat = getVisible('h1.DUwDvf + div span');
-            if (fallbackCat) category = fallbackCat.textContent.trim();
-          }
+          // Category
+          const catBtn = getVisible(container, 'button.DkEaL');
+          if (catBtn && catBtn.textContent) category = catBtn.textContent.trim();
+          else { const fb = getVisible(container, 'h1.DUwDvf + div span'); if (fb) category = fb.textContent.trim(); }
 
-          // Sitio_Web 
-          // Selector act: 'a[data-item-id="authority"]'. Fallback: 'a.QqG1Nd' (icon de web)
-          const webBtn = getVisible('a[data-item-id="authority"]');
-          if (webBtn && webBtn.href) {
-            website = webBtn.href;
-          }
+          // Website
+          const webBtn = getVisible(container, 'a[data-item-id="authority"]');
+          if (webBtn && webBtn.href) website = webBtn.href;
 
-          // Calificacion
-          // Selector act: 'div.F7nice span[aria-hidden="true"]'.
-          const ratingEl = getVisible('div.F7nice span[aria-hidden="true"]');
+          // Rating
+          const ratingEl = getVisible(container, 'div.F7nice span[aria-hidden="true"]');
           if (ratingEl) rating = ratingEl.textContent.trim();
-
-          const revEl = getVisible('div.F7nice span[aria-label*="reseñas"], div.F7nice span[aria-label*="reviews"]');
+          const revEl = getVisible(container, 'div.F7nice span[aria-label*="reseñas"], div.F7nice span[aria-label*="reviews"]');
           if (revEl) reviews = revEl.textContent.replace(/[()]/g, '').trim();
 
-          // WhatsApp 
-          // Buscar enlaces comunes de WhatsApp en el panel.
-          const waLinks = container.querySelectorAll('a[href*="wa.me"], a[href*="api.whatsapp.com"]');
-          const visibleWaLinks = Array.from(waLinks).filter(el => {
-            const rect = el.getBoundingClientRect();
-            return rect.width > 0 && rect.height > 0;
-          });
-          if (visibleWaLinks.length > 0) tieneWa = "Sí";
+          // Hours
+          const hoursBtn = getVisible(container, 'button[data-item-id="oh"]');
+          if (hoursBtn) { const hl = hoursBtn.getAttribute('aria-label'); if (hl) horario = hl; }
 
-          const titleLoaded = getVisible('h1.DUwDvf');
+          // WhatsApp in Maps panel
+          const waLinks = Array.from(container.querySelectorAll('a[href*="wa.me"], a[href*="api.whatsapp.com"]'));
+          if (waLinks.some(el => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0; })) tieneWa = 'Sí';
+
+          const titleLoaded = getVisible(container, 'h1.DUwDvf');
           if (titleLoaded && titleLoaded.textContent.trim() === name) {
-            if (phone !== "N/A" || attempts > 5) { // Esperar un par de intentos extras si el teléfono no carga inmediato
-              break;
-            }
+            if (phone !== 'N/A' || attempts > 5) break;
           }
           attempts++;
         }
 
-        // Si después de todos los intentos phone sigue siendo N/A, hagamos un chequeo global de última instancia
-        // a veces el panel no coincide con el aria-label esperado.
-        if (phone === "N/A") {
+        // Global phone fallback
+        if (phone === 'N/A') {
           const anyPhone = document.querySelector('button[data-item-id^="phone:tel:"]');
           if (anyPhone && anyPhone.getBoundingClientRect().width > 0) {
             const inner = anyPhone.querySelector('.Io6YTe');
@@ -147,138 +162,84 @@ async function scrapeData() {
           }
         }
 
-        // Calcular Score_Prospecto
-        const numRating = parseFloat(rating.replace(',', '.')) || 0;
-        const numReviews = parseInt(reviews.replace(/\D/g, '')) || 0;
-        const hasPhone = phone !== "N/A" && phone.length > 6;
-
-        let score = "❄️ Frío";
-        if (hasPhone && numRating >= 4.0 && numReviews >= 50) {
-          score = "🔥 Caliente";
-        } else if (hasPhone && (numRating < 4.0 || numReviews < 50)) {
-          score = "🟡 Tibio";
-        }
-
         results.push({
-          Nombre: name,
-          Calificacion: rating,
-          Resenas: reviews,
-          Telefono: phone,
-          Detalles: address,
-          Enlace: url,
-          Tiene_WhatsApp: tieneWa,
-          Sitio_Web: website,
-          Categoria: category,
-          Score_Prospecto: score
+          Nombre: name, Calificacion: rating, Resenas: reviews, Telefono: phone,
+          Detalles: address, Enlace: url, Tiene_WhatsApp: tieneWa, Sitio_Web: website,
+          Categoria: category, Score_Prospecto: calcScore(phone, rating, reviews),
+          Horario: horario, Estado_Contacto: 'Sin contactar',
+          Fecha_Extraccion: new Date().toISOString().split('T')[0]
         });
-      } catch (err) {
-        console.error("Error procesando", name, err);
-      }
-    }
-  } else {
-    // Para la búsqueda tradicional de Google (Local Pack)
-    const cards = document.querySelectorAll('.VkpGBb, .LxpZhd, .rllt__details, div[data-cid]');
 
+        if (results.length % 5 === 0) await savePartial();
+      } catch (err) { console.error('Error procesando', name, err); }
+    }
+
+  } else {
+    // ── Google Search (Local Pack) ──
+    const cards = document.querySelectorAll('.VkpGBb, .LxpZhd, .rllt__details, div[data-cid]');
     let i = 0;
     cards.forEach(card => {
       try {
         i++;
         const nameEl = card.querySelector('.OSrXXb, .dbg0pd, .BNeawe');
         const name = nameEl ? nameEl.textContent.trim() : 'Nombre no encontrado';
-
-        try {
-          chrome.runtime.sendMessage({ type: "progress", current: i, total: cards.length, name: name }).catch(() => { });
-        } catch (e) { }
+        sendMsg({ type: 'progress', current: i, total: cards.length, name });
 
         const ratingEl = card.querySelector('span.yi40Hd, span.Y0A0hc');
         const rating = ratingEl ? ratingEl.textContent.trim() : 'N/A';
-
         const reviewsEl = card.querySelector('span.RDApPh');
         const reviews = reviewsEl ? reviewsEl.textContent.trim().replace(/[()]/g, '') : 'N/A';
-
         const urlEl = card.querySelector('a');
         const url = urlEl ? urlEl.href : '';
 
-        let phone = "N/A";
-        const textToSearch = card.textContent;
+        let phone = 'N/A';
         const phoneRegex = /(?:\+?\d{1,3}[\s.-]*)?\(?\d{2,5}\)?[\s.-]*\d{3,4}[\s.-]*\d{3,4}/g;
-        const phoneMatches = textToSearch.match(phoneRegex);
-        if (phoneMatches) {
-          const validPhones = phoneMatches.filter(p => {
-            const digits = p.replace(/\D/g, '');
-            return digits.length >= 7 && digits.length <= 15;
-          });
-          if (validPhones.length > 0) {
-            phone = validPhones[validPhones.length - 1].trim();
-          }
+        const matches = card.textContent.match(phoneRegex);
+        if (matches) {
+          const valid = matches.filter(p => { const d = p.replace(/\D/g, ''); return d.length >= 7 && d.length <= 15; });
+          if (valid.length > 0) phone = valid[valid.length - 1].trim();
         }
 
-        // Calcular Score
-        const numRating = parseFloat(rating.replace(',', '.')) || 0;
-        const numReviews = parseInt(reviews.replace(/\D/g, '')) || 0;
-        const hasPhone = phone !== "N/A" && phone.length > 6;
-
-        let score = "❄️ Frío";
-        if (hasPhone && numRating >= 4.0 && numReviews >= 50) {
-          score = "🔥 Caliente";
-        } else if (hasPhone && (numRating < 4.0 || numReviews < 50)) {
-          score = "🟡 Tibio";
-        }
-
-        let website = "N/A";
-        const webButton = card.querySelector('a.yYlJEf.L48Cpd, a.VGHmvd');
-        if (webButton && webButton.href && !webButton.href.includes('google.com')) {
-          website = webButton.href;
-        }
+        let website = 'N/A';
+        const webBtn = card.querySelector('a.yYlJEf.L48Cpd, a.VGHmvd');
+        if (webBtn && webBtn.href && !webBtn.href.includes('google.com')) website = webBtn.href;
 
         if (name && name !== 'Nombre no encontrado') {
           results.push({
-            Nombre: name,
-            Calificacion: rating,
-            Resenas: reviews,
-            Telefono: phone,
-            Detalles: "Búsqueda web",
-            Enlace: url,
-            Tiene_WhatsApp: "N/A", // Dificil detectar de search snippet sin click
-            Sitio_Web: website,
-            Categoria: "N/A",
-            Score_Prospecto: score
+            Nombre: name, Calificacion: rating, Resenas: reviews, Telefono: phone,
+            Detalles: 'Búsqueda web', Enlace: url, Tiene_WhatsApp: 'N/A',
+            Sitio_Web: website, Categoria: 'N/A',
+            Score_Prospecto: calcScore(phone, rating, reviews),
+            Horario: 'N/A', Estado_Contacto: 'Sin contactar',
+            Fecha_Extraccion: new Date().toISOString().split('T')[0]
           });
         }
-      } catch (e) {
-        console.error("Error procesando un restaurante en Búsqueda", e);
-      }
+      } catch (e) { console.error('Error en Búsqueda', e); }
     });
 
     if (results.length === 0) {
-      const mapLinks = document.querySelectorAll('a[href*="/maps/place/"]');
-      mapLinks.forEach(link => {
+      document.querySelectorAll('a[href*="/maps/place/"]').forEach(link => {
         try {
-          const container = link.closest('div');
-          if (container) {
-            results.push({
-              Nombre: link.textContent.trim() || 'Desconocido',
-              Calificacion: 'N/A',
-              Resenas: 'N/A',
-              Telefono: 'N/A',
-              Detalles: 'Solo enlace encontrado',
-              Enlace: link.href,
-              Tiene_WhatsApp: "N/A",
-              Sitio_Web: "N/A",
-              Categoria: "N/A",
-              Score_Prospecto: "❄️ Frío"
-            });
-          }
-        } catch (e) { console.debug(e); }
+          results.push({
+            Nombre: link.textContent.trim() || 'Desconocido', Calificacion: 'N/A',
+            Resenas: 'N/A', Telefono: 'N/A', Detalles: 'Solo enlace', Enlace: link.href,
+            Tiene_WhatsApp: 'N/A', Sitio_Web: 'N/A', Categoria: 'N/A',
+            Score_Prospecto: '❄️ Frío', Horario: 'N/A', Estado_Contacto: 'Sin contactar',
+            Fecha_Extraccion: new Date().toISOString().split('T')[0]
+          });
+        } catch (e) { }
       });
     }
   }
 
-  // Ordenar para que 🔥 Calientes estén primero
+  // Sort: hot first
   results.sort((a, b) => {
-    const getVal = x => x.Score_Prospecto === "🔥 Caliente" ? 2 : (x.Score_Prospecto === "🟡 Tibio" ? 1 : 0);
-    return getVal(b) - getVal(a);
+    const v = x => x.Score_Prospecto.includes('Caliente') ? 2 : x.Score_Prospecto.includes('Tibio') ? 1 : 0;
+    return v(b) - v(a);
   });
+
+  // Clear partial, save final status
+  await chrome.storage.local.set({ fastbite_partial: null, fastbite_status: 'done' });
 
   return results;
 }

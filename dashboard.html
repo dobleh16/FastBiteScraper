@@ -11,68 +11,95 @@
     <div class="dashboard-container">
         <aside class="sidebar">
             <div class="brand">
-                <img src="https://fonts.gstatic.com/s/i/short-term/release/googlesymbols/restaurant/default/24px.svg"
-                    alt="Icon" class="icon" />
+                <div class="brand-icon">FB</div>
                 <h2>FastBiteSaaS</h2>
             </div>
 
-            <div class="wa-config">
-                <h3>Configuración de WhatsApp</h3>
-                <p class="section-desc">Personaliza el mensaje que enviarás a los restaurantes.</p>
-
-                <label for="ordersInput">Pedidos promedio/día (Rappi):</label>
+            <!-- WA Templates -->
+            <div class="sidebar-section">
+                <h3>💬 Plantillas WhatsApp</h3>
+                <select id="templateSelect"></select>
+                <label for="ordersInput">Pedidos promedio/día:</label>
                 <input type="number" id="ordersInput" value="30" />
-
-                <label for="waTemplate">Plantilla del mensaje:</label>
-                <textarea id="waTemplate" rows="12"></textarea>
+                <label for="waTemplate">Mensaje:</label>
+                <textarea id="waTemplate" rows="10"></textarea>
+                <div class="template-actions">
+                    <button id="saveTemplateBtn" class="btn small primary">Guardar</button>
+                    <button id="newTemplateBtn" class="btn small secondary">+ Nueva</button>
+                    <button id="deleteTemplateBtn" class="btn small danger">Eliminar</button>
+                </div>
             </div>
 
-            <div class="summary-section">
-                <h3>Resumen</h3>
-                <div class="stat-badge">
-                    <span>Total:</span>
-                    <span id="statTotal">0</span>
-                </div>
-                <div class="stat-badge hot">
-                    <span>🔥 Calientes:</span>
-                    <span id="statHot">0</span>
-                </div>
-                <div class="stat-badge wapp">
-                    <span>Con WhatsApp:</span>
-                    <span id="statWa">0</span>
-                </div>
+            <!-- Summary -->
+            <div class="sidebar-section summary-section">
+                <h3>📊 Resumen</h3>
+                <div class="stat-badge"><span>Total:</span><span id="statTotal">0</span></div>
+                <div class="stat-badge hot"><span>🔥 Calientes:</span><span id="statHot">0</span></div>
+                <div class="stat-badge warm"><span>🟡 Tibios:</span><span id="statWarm">0</span></div>
+                <div class="stat-badge cold"><span>❄️ Fríos:</span><span id="statCold">0</span></div>
+                <div class="stat-badge wapp"><span>📱 WhatsApp:</span><span id="statWa">0</span></div>
+                <!-- Mini chart -->
+                <div class="mini-chart" id="miniChart"></div>
             </div>
 
             <div class="export-actions">
-                <button id="downloadFullCsv" class="btn secondary">Descargar CSV Completo</button>
+                <button id="downloadFullCsv" class="btn secondary">📥 Descargar CSV</button>
+                <button id="downloadPdfBtn" class="btn primary">📄 Descargar PDF (Visitas)</button>
+                <button id="clearHistoryBtn" class="btn small danger" style="margin-top:8px">🗑️ Limpiar
+                    Historial</button>
             </div>
         </aside>
 
         <main class="main-content">
             <header class="topbar">
                 <h1>Gestión de Prospectos</h1>
+                <div class="topbar-right">
+                    <span id="historyCount" class="history-badge">Historial: 0</span>
+                </div>
             </header>
+
+            <!-- Filters -->
+            <div class="filter-bar">
+                <input type="text" id="searchInput" placeholder="🔍 Buscar por nombre o categoría..." />
+                <select id="scoreFilter">
+                    <option value="all">Todos los Scores</option>
+                    <option value="hot">🔥 Caliente</option>
+                    <option value="warm">🟡 Tibio</option>
+                    <option value="cold">❄️ Frío</option>
+                </select>
+                <select id="waFilter">
+                    <option value="all">WhatsApp: Todos</option>
+                    <option value="yes">Con WhatsApp</option>
+                    <option value="no">Sin WhatsApp</option>
+                </select>
+                <select id="statusFilter">
+                    <option value="all">Estado: Todos</option>
+                    <option value="Sin contactar">Sin contactar</option>
+                    <option value="Contactado">Contactado</option>
+                    <option value="Interesado">Interesado</option>
+                    <option value="No interesado">No interesado</option>
+                    <option value="Cliente">Cliente</option>
+                </select>
+            </div>
 
             <div class="table-container">
                 <table id="prospectosTable">
                     <thead>
                         <tr>
-                            <th>Restaurante</th>
-                            <th>Contacto / WA</th>
-                            <th>Score</th>
-                            <th>Calificación</th>
+                            <th class="sortable" data-col="Nombre">Restaurante ↕</th>
+                            <th>Contacto</th>
+                            <th class="sortable" data-col="Score_Prospecto">Score ↕</th>
+                            <th class="sortable" data-col="Calificacion">Rating ↕</th>
                             <th>Categoría</th>
+                            <th>Estado</th>
                             <th>Acciones</th>
                         </tr>
                     </thead>
-                    <tbody id="tableBody">
-                        <!-- Filas dinámicas -->
-                    </tbody>
+                    <tbody id="tableBody"></tbody>
                 </table>
             </div>
         </main>
     </div>
-
     <script src="dashboard.js"></script>
 </body>
 

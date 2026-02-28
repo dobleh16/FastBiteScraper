@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <title>FastBite - Reporte de Visitas</title>
+    <link rel="stylesheet" href="report.css">
+</head>
+
+<body>
+    <div class="report-header no-print">
+        <h2>📄 Reporte de Visitas a Restaurantes</h2>
+        <p>Este reporte está optimizado para imprimir. Haz clic en el botón para guardar como PDF.</p>
+        <button id="printBtn" class="print-btn">📥 Descargar como PDF</button>
+    </div>
+
+    <div class="report-content" id="reportContent">
+        <div class="report-title">
+            <h1>FastBiteSaaS — Reporte de Prospectos</h1>
+            <p class="report-subtitle">Reporte para visitas en persona</p>
+            <p class="report-date" id="reportDate"></p>
+        </div>
+
+        <div class="report-summary" id="reportSummary"></div>
+
+        <table class="report-table">
+            <thead>
+                <tr>
+                    <th class="col-num">#</th>
+                    <th class="col-name">Restaurante</th>
+                    <th class="col-address">Dirección</th>
+                    <th class="col-phone">Teléfono</th>
+                    <th class="col-cat">Categoría</th>
+                    <th class="col-rating">Rating</th>
+                    <th class="col-score">Score</th>
+                    <th class="col-hours">Horario</th>
+                    <th class="col-notes">Notas de Visita</th>
+                </tr>
+            </thead>
+            <tbody id="reportBody"></tbody>
+        </table>
+
+        <div class="report-footer">
+            <p>Generado por <strong>FastBiteScraper</strong> — fastbitesas.web.app</p>
+        </div>
+    </div>
+
+    <script src="report.js"></script>
+</body>
+
+</html>

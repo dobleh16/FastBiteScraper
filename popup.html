@@ -1,20 +1,19 @@
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
   <meta charset="UTF-8">
   <link rel="stylesheet" href="popup.css">
   <title>FastBiteScraper</title>
 </head>
-
 <body>
   <div class="container">
     <div class="header">
-      <img src="https://fonts.gstatic.com/s/i/short-term/release/googlesymbols/restaurant/default/24px.svg" alt="Icon"
-        class="icon" />
-      <h1 class="brand-title">FastBiteScraper</h1>
+      <div class="brand-icon">FB</div>
+      <div>
+        <h1 class="brand-title">FastBiteScraper</h1>
+        <p class="subtitle">Prospectos B2B desde Google Maps</p>
+      </div>
     </div>
-    <p class="subtitle">Prospectos B2B desde Google Maps</p>
 
     <div class="input-group">
       <label for="campaignInput">Etiqueta de Campaña (opcional):</label>
@@ -23,8 +22,21 @@
 
     <div class="actions">
       <button id="scrapeBtn" class="btn primary">
-        <span>Extraer Restaurantes</span>
+        <span>⚡ Extraer Restaurantes</span>
       </button>
+      <button id="cancelBtn" class="btn danger hidden">✕ Cancelar Extracción</button>
+    </div>
+
+    <!-- Progress Bar -->
+    <div id="progressSection" class="progress-section hidden">
+      <div class="progress-header">
+        <span id="progressLabel">Preparando...</span>
+        <span id="progressPercent">0%</span>
+      </div>
+      <div class="progress-bar-track">
+        <div id="progressBar" class="progress-bar-fill"></div>
+      </div>
+      <p id="progressDetail" class="progress-detail"></p>
     </div>
 
     <div id="status" class="status-box hidden">
@@ -47,25 +59,16 @@
           <span class="stat-label">WhatsApp</span>
         </div>
       </div>
-
-      <div class="download-actions">
-        <button id="openDashboardBtn" class="btn success">Abrir Dashboard 📊</button>
-        <button id="downloadAllBtn" class="btn success-outline">CSV (Backup)</button>
+      <div id="dupAlert" class="dup-alert hidden">
+        <strong>⚠️ Duplicados encontrados:</strong>
+        <p id="dupList"></p>
       </div>
-
-      <button id="waGeneratorBtn" class="btn secondary">Crear Mensaje WA</button>
+      <div class="download-actions">
+        <button id="openDashboardBtn" class="btn success">📊 Abrir Dashboard</button>
+        <button id="downloadAllBtn" class="btn success-outline">💾 CSV (Backup)</button>
+      </div>
     </div>
-
-    <div id="waModal" class="wa-modal hidden">
-      <h3>Mensaje Plantilla</h3>
-      <label for="ordersInput">Pedidos promedio (día) por Rappi:</label>
-      <input type="number" id="ordersInput" value="30" />
-      <textarea id="waTemplate" rows="10"></textarea>
-      <button id="copyWaBtn" class="btn primary">Copiar Mensaje</button>
-    </div>
-
   </div>
   <script src="popup.js"></script>
 </body>
-
 </html>
