@@ -120,8 +120,17 @@ async function scrapeData() {
           }
 
           // Address
-          const addrBtn = getVisible(container, 'button[data-item-id="address"]');
-          if (addrBtn) { const inner = addrBtn.querySelector('.Io6YTe'); if (inner) address = inner.textContent.trim(); }
+          const addrBtn = getVisible(container, 'button[data-item-id="address"], button[aria-label^="Dirección:"], button[aria-label^="Address:"]');
+          if (addrBtn) {
+            const lbl = addrBtn.getAttribute('aria-label');
+            if (lbl) {
+              address = lbl.replace(/^Dirección:\s*/i, '').replace(/^Address:\s*/i, '').trim();
+            }
+            if (!address || address === 'N/A') {
+              const inner = addrBtn.querySelector('.Io6YTe, .fontBodyMedium');
+              if (inner) address = inner.textContent.trim();
+            }
+          }
 
           // Category
           const catBtn = getVisible(container, 'button.DkEaL');
